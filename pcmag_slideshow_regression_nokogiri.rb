@@ -1,48 +1,41 @@
 require 'mechanize'
 require 'nokogiri'
-require 'open-uri'
 require 'pp'
 require 'rspec'
 require 'rubygems'
 
-def skip_ad_page
-  begin
-    skip_ad_img = @doc.at_xpath("//img[contains(@src,'"'prestitial_skipad_v2_172x118.gif'"')]")
-    skip_ad_img.click
-   rescue
-   end
-end
-
-describe "Test", :type => :selenium do
+describe 'Test', :type => :nokogiri do
   before(:all) do
-    @doc = Nokogiri::HTML(open("http://www.nyq.pcmag.com/article2/0,2817,2415021,00.asp/"))
-    agent = Mechanize.new
-    @page = agent.get('http://www.nyq.pcmag.com/article2/0,2817,2415021,00.asp/')
+    @agent = Mechanize.new
+    @agent.user_agent_alias = 'Windows Mozilla'
+    @article = @agent.get('http://www.nyq.pcmag.com/article2/0,2817,2415021,00.asp/')
   end
 
-  it "can find the right title" do
-    @doc.at_css('h1').text.should include("Unboxing the Microsoft Surface Windows 8 Pro")
+  it 'can find the right title' do
+    @article.at('h1').text.should eql('Unboxing the Microsoft Surface Windows 8 Pro')
+    $articlePageTitle = @article.title
   end
 
-   it "can find gallery links and cycle through the slideshow" do
-    #gallery_links = @doc.xpath('//a[contains(text(), "VIEW ALL PHOTOS IN GALLERY")]')
-    gallery_links = @page.links.find_all { |l| l.text =~ /VIEW ALL PHOTOS IN GALLERY/ }
-    #gallery_links = @page.links.find_all
-    #gallery_links.count.should eql(3)
+  it 'can find gallery links and cycle through the slideshow' do
+    galleryLinks = @article.links.find_all { |l| l.text =~ /VIEW ALL PHOTOS IN GALLERY/ }
+    galleryLinks.count.should eql(3)
+    slideshow = @agent.get(galleryLinks[1].href)
+    nextSlideLink = slideshow.links.find { |l| l.attributes['class'] == 'next-slide' }
+    slide2 = @agent.get(nextSlideLink.href)
+    slide2.at('div.bar').text.split('/').first.to_i.should eql(2)
+    img2 = slide2.images.find { |i| i.alt == 'Peripherals' }
+    img2.src.should include('peripherals')
 
-    gallery_links.each do |link|
-      pp link.text
-    end
+    prevSlideLink = slide2.links.find { |l| l.attributes['class'] == 'prev-slide' }
+    $slide1 = @agent.get(prevSlideLink.href)
+    $slide1.at('div.bar').text.split('/').first.to_i.should eql(1)
+    img1 = $slide1.images.find { |i| i.alt == 'Press Kit' }
+    img1.src.should include('press-kit')
+  end
 
-    gallery_links[1].click
-    pp @page.title
-    skip_ad_page
-    #@driver.find_element(:class, "next-slide").click
-    #@wait.until { @driver.find_element(:class, "bar") }
-    #@driver.find_element(:class, "bar").text.split('/').first.to_i.should eql(2)
-
-    #@driver.find_element(:class, "prev-slide").click
-    #@wait.until { @driver.find_element(:class, "bar") }
-    #@driver.find_element(:class, "bar").text.split('/').first.to_i.should eql(1)
+  it 'can return back to article' do 
+    backToArticleLink = $slide1.links.find { |l| l.text == 'Back to article' }
+    backToArticle = @agent.get(backToArticleLink.href)
+    backToArticle.title.should eql($articlePageTitle)
   end
 end
