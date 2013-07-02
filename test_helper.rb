@@ -23,7 +23,11 @@ module Vars
 end
 
 def BackToArticleLink(page)
-    page.links.find { |l| l.text. =~ /Back to Article/i }
+    page.links.find { |l| l.text =~ /Back to Article/i }
+end
+
+def FindAllLinksByAttribute(page, attribute, reg)
+    page.links.find_all { |l| l.attributes[attribute] =~ reg }
 end
 
 def FindAllLinksByHref(page, url)
