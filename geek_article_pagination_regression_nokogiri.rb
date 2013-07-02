@@ -29,7 +29,6 @@ def ValidatePage(page, pagenationLinks, pageNum, pageCnt)
 end
 
 describe 'Test', :type => :nokogiri do
-  include Vars
   before(:all) do
     @agent = Mechanize.new
     @agent.user_agent_alias = 'Windows Mozilla'
